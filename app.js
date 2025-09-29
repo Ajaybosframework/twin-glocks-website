@@ -304,101 +304,99 @@ const searchInput = document.getElementById('searchInput');
 const searchIcon = document.getElementById('searchIcon');
 const searchResults = document.getElementById('searchResults');
 
-// Search function
-function searchProducts(searchTerm) {
-    const term = searchTerm.toLowerCase().trim();
+// Only initialize search if elements exist
+if (searchInput && searchIcon && searchResults) {
     
-    if (term.length === 0) {
-        searchResults.style.display = 'none';
-        return;
-    }
-
-    // Filter products based on search term
-    const filteredProducts = products.filter(product => 
-        product.title.toLowerCase().includes(term) ||
-        product.title.toLowerCase().replace(/\s+/g, '').includes(term.replace(/\s+/g, ''))
-    );
-
-    displaySearchResults(filteredProducts);
-}
-
-// Display search results
-function displaySearchResults(results) {
-    searchResults.innerHTML = '';
-
-    if (results.length === 0) {
-        searchResults.innerHTML = '<div class="noResults">No products found</div>';
-        searchResults.style.display = 'block';
-        return;
-    }
-
-    results.forEach(product => {
-        const resultItem = document.createElement('div');
-        resultItem.className = 'searchResultItem';
-        resultItem.innerHTML = `
-            <img src="${product.colors[0].img}" alt="${product.title}" class="searchResultImage">
-            <div class="searchResultInfo">
-                <div class="searchResultName">${product.title}</div>
-                <div class="searchResultPrice">$${product.price}</div>
-            </div>
-        `;
+    // Search function
+    function searchProducts(searchTerm) {
+        const term = searchTerm.toLowerCase().trim();
         
-        // Click handler for search result
-        resultItem.addEventListener('click', () => {
-            selectProductFromSearch(product);
+        if (term.length === 0) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        const filteredProducts = products.filter(product => 
+            product.title.toLowerCase().includes(term) ||
+            product.title.toLowerCase().replace(/\s+/g, '').includes(term.replace(/\s+/g, ''))
+        );
+
+        displaySearchResults(filteredProducts);
+    }
+
+    // Display search results
+    function displaySearchResults(results) {
+        searchResults.innerHTML = '';
+
+        if (results.length === 0) {
+            searchResults.innerHTML = '<div class="noResults">No products found</div>';
+            searchResults.style.display = 'block';
+            return;
+        }
+
+        results.forEach(product => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'searchResultItem';
+            resultItem.innerHTML = `
+                <img src="${product.colors[0].img}" alt="${product.title}" class="searchResultImage">
+                <div class="searchResultInfo">
+                    <div class="searchResultName">${product.title}</div>
+                    <div class="searchResultPrice">$${product.price}</div>
+                </div>
+            `;
+            
+            resultItem.addEventListener('click', () => {
+                selectProductFromSearch(product);
+            });
+            
+            searchResults.appendChild(resultItem);
         });
+
+        searchResults.style.display = 'block';
+    }
+
+    // When user selects a product from search
+    function selectProductFromSearch(product) {
+        const productIndex = products.findIndex(p => p.id === product.id);
         
-        searchResults.appendChild(resultItem);
+        if (productIndex !== -1) {
+            menuItems[productIndex].click();
+            document.getElementById('product').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+        
+        searchInput.value = '';
+        searchResults.style.display = 'none';
+    }
+
+    // Event listeners for search
+    searchInput.addEventListener('input', (e) => {
+        searchProducts(e.target.value);
     });
 
-    searchResults.style.display = 'block';
-}
-
-// When user selects a product from search
-function selectProductFromSearch(product) {
-    // Find the index of the product
-    const productIndex = products.findIndex(p => p.id === product.id);
-    
-    if (productIndex !== -1) {
-        // Simulate clicking the menu item to show the product
-        menuItems[productIndex].click();
-        
-        // Scroll to the product section
-        document.getElementById('product').scrollIntoView({ 
-            behavior: 'smooth' 
-        });
-    }
-    
-    // Clear search and hide results
-    searchInput.value = '';
-    searchResults.style.display = 'none';
-}
-
-// Event listeners for search
-searchInput.addEventListener('input', (e) => {
-    searchProducts(e.target.value);
-});
-
-searchIcon.addEventListener('click', () => {
-    searchProducts(searchInput.value);
-});
-
-// Search when user presses Enter
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+    searchIcon.addEventListener('click', () => {
         searchProducts(searchInput.value);
-    }
-});
+    });
 
-// Close search results when clicking outside
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search')) {
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchProducts(searchInput.value);
+        }
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search')) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Also close results when scrolling
+    window.addEventListener('scroll', () => {
         searchResults.style.display = 'none';
-    }
-});
+    });
 
-// Also close results when scrolling
-window.addEventListener('scroll', () => {
-    searchResults.style.display = 'none';
-});
-
+} else {
+    console.log('Search elements not found - search functionality disabled');
+}
