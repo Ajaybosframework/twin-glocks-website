@@ -109,10 +109,17 @@ function showLoginError(message) {
 
 function updateUserInterface() {
     const socialButtons = document.querySelector('.socialLoginButtons');
+    
+    // ADD THIS CHECK - Fix the error
+    if (!socialButtons) {
+        console.log("Social buttons not found - page might still be loading");
+        return;
+    }
+    
     const userInfoDiv = document.createElement('div');
     userInfoDiv.className = 'userInfo';
     userInfoDiv.innerHTML = `
-        <img src="${currentUser.photoURL}" alt="User" class="userAvatar">
+        <img src="${currentUser.photoURL}" alt="User" class="userAvatar" onerror="this.src='https://via.placeholder.com/32'">
         <div class="userDetails">
             <div class="userName">${currentUser.displayName}</div>
             <div class="userEmail">${currentUser.email}</div>
@@ -120,8 +127,18 @@ function updateUserInterface() {
         <button class="logoutBtn">Logout</button>
     `;
     
-    socialButtons.parentNode.replaceChild(userInfoDiv, socialButtons);
-    document.querySelector('.logoutBtn').addEventListener('click', logout);
+    // ADD THIS CHECK - Fix the error
+    if (socialButtons.parentNode) {
+        socialButtons.parentNode.replaceChild(userInfoDiv, socialButtons);
+        
+        // Wait a bit before adding event listener
+        setTimeout(() => {
+            const logoutBtn = document.querySelector('.logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+        }, 100);
+    }
 }
 
 function logout() {
@@ -278,4 +295,5 @@ productButton.addEventListener("click", () => {
 
 close.addEventListener("click", () => {
     payment.style.display = "none";
+
 });
