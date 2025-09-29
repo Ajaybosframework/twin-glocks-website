@@ -170,11 +170,11 @@ const products = [
     colors: [
       {
         code: "black",
-        img: "./Images/air.png",
+        img: "./images/air.png",
       },
       {
         code: "darkblue",
-        img: "./Images/air2.png",
+        img: "./images/air2.png",
       },
     ],
   },
@@ -185,11 +185,11 @@ const products = [
     colors: [
       {
         code: "lightgray",
-        img: "./Images/jordan.png",
+        img: "./images/jordan.png",
       },
       {
         code: "green",
-        img: "./Images/jordan2.png",
+        img: "./images/jordan2.png",
       },
     ],
   },
@@ -200,11 +200,11 @@ const products = [
     colors: [
       {
         code: "lightgray",
-        img: "./Images/blazer.png",
+        img: "./images/blazer.png",
       },
       {
         code: "green",
-        img: "./Images/blazer2.png",
+        img: "./images/blazer2.png",
       },
     ],
   },
@@ -215,11 +215,11 @@ const products = [
     colors: [
       {
         code: "black",
-        img: "./Images/crater.png",
+        img: "./images/crater.png",
       },
       {
         code: "lightgray",
-        img: "./Images/crater2.png",
+        img: "./images/crater2.png",
       },
     ],
   },
@@ -230,11 +230,11 @@ const products = [
     colors: [
       {
         code: "gray",
-        img: "./Images/hippie.png",
+        img: "./images/hippie.png",
       },
       {
         code: "black",
-        img: "./Images/hippie2.png",
+        img: "./images/hippie2.png",
       },
     ],
   },
@@ -297,3 +297,108 @@ close.addEventListener("click", () => {
     payment.style.display = "none";
 
 });
+
+// ==================== PRODUCT SEARCH FUNCTIONALITY ====================
+
+const searchInput = document.getElementById('searchInput');
+const searchIcon = document.getElementById('searchIcon');
+const searchResults = document.getElementById('searchResults');
+
+// Search function
+function searchProducts(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+    
+    if (term.length === 0) {
+        searchResults.style.display = 'none';
+        return;
+    }
+
+    // Filter products based on search term
+    const filteredProducts = products.filter(product => 
+        product.title.toLowerCase().includes(term) ||
+        product.title.toLowerCase().replace(/\s+/g, '').includes(term.replace(/\s+/g, ''))
+    );
+
+    displaySearchResults(filteredProducts);
+}
+
+// Display search results
+function displaySearchResults(results) {
+    searchResults.innerHTML = '';
+
+    if (results.length === 0) {
+        searchResults.innerHTML = '<div class="noResults">No products found</div>';
+        searchResults.style.display = 'block';
+        return;
+    }
+
+    results.forEach(product => {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'searchResultItem';
+        resultItem.innerHTML = `
+            <img src="${product.colors[0].img}" alt="${product.title}" class="searchResultImage">
+            <div class="searchResultInfo">
+                <div class="searchResultName">${product.title}</div>
+                <div class="searchResultPrice">$${product.price}</div>
+            </div>
+        `;
+        
+        // Click handler for search result
+        resultItem.addEventListener('click', () => {
+            selectProductFromSearch(product);
+        });
+        
+        searchResults.appendChild(resultItem);
+    });
+
+    searchResults.style.display = 'block';
+}
+
+// When user selects a product from search
+function selectProductFromSearch(product) {
+    // Find the index of the product
+    const productIndex = products.findIndex(p => p.id === product.id);
+    
+    if (productIndex !== -1) {
+        // Simulate clicking the menu item to show the product
+        menuItems[productIndex].click();
+        
+        // Scroll to the product section
+        document.getElementById('product').scrollIntoView({ 
+            behavior: 'smooth' 
+        });
+    }
+    
+    // Clear search and hide results
+    searchInput.value = '';
+    searchResults.style.display = 'none';
+}
+
+// Event listeners for search
+searchInput.addEventListener('input', (e) => {
+    searchProducts(e.target.value);
+});
+
+searchIcon.addEventListener('click', () => {
+    searchProducts(searchInput.value);
+});
+
+// Search when user presses Enter
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchProducts(searchInput.value);
+    }
+});
+
+// Close search results when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search')) {
+        searchResults.style.display = 'none';
+    }
+});
+
+// Also close results when scrolling
+window.addEventListener('scroll', () => {
+    searchResults.style.display = 'none';
+});
+
