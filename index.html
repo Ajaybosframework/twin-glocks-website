@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -26,7 +25,11 @@
                 </div>
             </div>
             <div class="navItem">
-                <span class="limitedOffer">Limited Offer!</span>
+                <!-- Cart Icon -->
+                <div class="cartIcon" onclick="toggleCart()">
+                    <span>🛒 Cart</span>
+                    <span class="cartCount" style="display: none;">0</span>
+                </div>
             </div>
         </div>
         <div class="navBottom">
@@ -37,6 +40,30 @@
             <h3 class="menuItem">HIPPIE</h3>
         </div>
     </nav>
+
+    <!-- Shopping Cart Modal -->
+    <div class="cartModal">
+        <div class="cartHeader">
+            <h2>Shopping Cart</h2>
+            <button onclick="toggleCart()" class="closeCartBtn">×</button>
+        </div>
+        <div id="cartItems" class="cartItemsContainer">
+            <!-- Cart items will be populated here -->
+        </div>
+        <div class="cartFooter">
+            <div class="cartTotalRow">
+                <span>Total:</span>
+                <span id="cartTotal">$0</span>
+            </div>
+            <button class="checkoutBtn" onclick="proceedToCheckout()">
+                Proceed to Checkout
+            </button>
+            <button class="continueShoppingBtn" onclick="toggleCart()">
+                Continue Shopping
+            </button>
+        </div>
+    </div>
+
     <div class="slider">
         <div class="sliderWrapper">
             <div class="sliderItem">
@@ -114,10 +141,9 @@
         <img src="images/air.png" alt="" class="productImg">
         <div class="productDetails">
             <h1 class="productTitle">AIR FORCE</h1>
-            <h2 class="productPrice">$199</h2>
+            <h2 class="productPrice">$119</h2>
             <p class="productDesc">Lorem ipsum dolor sit amet consectetur impal adipisicing elit. Alias assumenda
-                dolorum
-                doloremque sapiente aliquid aperiam.</p>
+                dolorum doloremque sapiente aliquid aperiam.</p>
             <div class="colors">
                 <div class="color"></div>
                 <div class="color"></div>
@@ -127,7 +153,7 @@
                 <div class="size">43</div>
                 <div class="size">44</div>
             </div>
-            <button class="productButton">BUY NOW!</button>
+            <button class="productButton">ADD TO CART</button>
         </div>
         <div class="payment">
             <h1 class="payTitle">Personal Information</h1>
@@ -152,6 +178,7 @@
             <span class="close">X</span>
         </div>
     </div>
+
     <div class="gallery">
         <div class="galleryItem">
             <h1 class="galleryTitle">Be Yourself!</h1>
@@ -169,6 +196,7 @@
                 alt="" class="galleryImg">
         </div>
     </div>
+
     <div class="newSeason">
         <div class="nsItem">
             <img src="https://images.pexels.com/photos/4753986/pexels-photo-4753986.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=500"
@@ -188,77 +216,78 @@
         </div>
     </div>
    
-<footer>
-    <div class="footerLeft">
-        <div class="footerMenu">
-            <h1 class="fMenuTitle">About Us</h1>
-            <ul class="fList">
-                <li class="fListItem">Company</li>
-                <li class="fListItem">Contact</li>
-                <li class="fListItem">Careers</li>
-                <li class="fListItem">Affiliates</li>
-                <li class="fListItem">Stores</li>
-            </ul>
-        </div>
-        <div class="footerMenu">
-            <h1 class="fMenuTitle">Useful Links</h1>
-            <ul class="fList">
-                <li class="fListItem">Support</li>
-                <li class="fListItem">Refund</li>
-                <li class="fListItem">FAQ</li>
-                <li class="fListItem">Feedback</li>
-                <li class="fListItem">Stories</li>
-            </ul>
-        </div>
-        <div class="footerMenu">
-            <h1 class="fMenuTitle">Products</h1>
-            <ul class="fList">
-                <li class="fListItem">Air Force</li>
-                <li class="fListItem">Air Jordan</li>
-                <li class="fListItem">Blazer</li>
-                <li class="fListItem">Crater</li>
-                <li class="fListItem">Hippie</li>
-            </ul>
-        </div>
-    </div>
-       <div class="footerRight">
-        <div class="footerRightMenu">
-            <h1 class="fMenuTitle">Join Our Community</h1>
-            <div class="fMail">
-                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Sign up with your social account</p>
-                <div class="socialLoginButtons">
-                    <button class="socialBtn googleBtn">
-                        <img src="https://img.icons8.com/color/16/000000/google-logo.png" alt="Google">
-                        Continue with Google
-                    </button>
-                    <button class="socialBtn facebookBtn">
-                        <img src="https://img.icons8.com/color/16/000000/facebook.png" alt="Facebook">
-                        Continue with Facebook
-                    </button>
-                    <button class="socialBtn githubBtn">
-                        <img src="https://img.icons8.com/ios-filled/16/ffffff/github.png" alt="GitHub">
-                        Continue with GitHub
-                    </button>
-                </div>
-                <div class="loginStatus" id="loginStatus" style="display: none; margin-top: 15px; padding: 10px; border-radius: 5px; background: #e8f5e8; color: #2e7d32;">
-                </div>
+    <footer>
+        <div class="footerLeft">
+            <div class="footerMenu">
+                <h1 class="fMenuTitle">About Us</h1>
+                <ul class="fList">
+                    <li class="fListItem">Company</li>
+                    <li class="fListItem">Contact</li>
+                    <li class="fListItem">Careers</li>
+                    <li class="fListItem">Affiliates</li>
+                    <li class="fListItem">Stores</li>
+                </ul>
+            </div>
+            <div class="footerMenu">
+                <h1 class="fMenuTitle">Useful Links</h1>
+                <ul class="fList">
+                    <li class="fListItem">Support</li>
+                    <li class="fListItem">Refund</li>
+                    <li class="fListItem">FAQ</li>
+                    <li class="fListItem">Feedback</li>
+                    <li class="fListItem">Stories</li>
+                </ul>
+            </div>
+            <div class="footerMenu">
+                <h1 class="fMenuTitle">Products</h1>
+                <ul class="fList">
+                    <li class="fListItem">Air Force</li>
+                    <li class="fListItem">Air Jordan</li>
+                    <li class="fListItem">Blazer</li>
+                    <li class="fListItem">Crater</li>
+                    <li class="fListItem">Hippie</li>
+                </ul>
             </div>
         </div>
-        <div class="footerRightMenu">
-            <h1 class="fMenuTitle">Follow Us</h1>
-            <div class="fIcons">
-                <img src="Images/facebook.png" alt="" class="fIcon">
-                <img src="Images/twitter.png" alt="" class="fIcon">
-                <img src="Images/instagram (1).png" alt="" class="fIcon">
-                <img src="Images/whatsapp.png" alt="" class="fIcon">
+        <div class="footerRight">
+            <div class="footerRightMenu">
+                <h1 class="fMenuTitle">Join Our Community</h1>
+                <div class="fMail">
+                    <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Sign up with your social account</p>
+                    <div class="socialLoginButtons">
+                        <button class="socialBtn googleBtn">
+                            <img src="https://img.icons8.com/color/16/000000/google-logo.png" alt="Google">
+                            Continue with Google
+                        </button>
+                        <button class="socialBtn facebookBtn">
+                            <img src="https://img.icons8.com/color/16/000000/facebook.png" alt="Facebook">
+                            Continue with Facebook
+                        </button>
+                        <button class="socialBtn githubBtn">
+                            <img src="https://img.icons8.com/ios-filled/16/ffffff/github.png" alt="GitHub">
+                            Continue with GitHub
+                        </button>
+                    </div>
+                    <div class="loginStatus" id="loginStatus" style="display: none; margin-top: 15px; padding: 10px; border-radius: 5px; background: #e8f5e8; color: #2e7d32;">
+                    </div>
+                </div>
+            </div>
+            <div class="footerRightMenu">
+                <h1 class="fMenuTitle">Follow Us</h1>
+                <div class="fIcons">
+                    <img src="Images/facebook.png" alt="" class="fIcon">
+                    <img src="Images/twitter.png" alt="" class="fIcon">
+                    <img src="Images/instagram (1).png" alt="" class="fIcon">
+                    <img src="Images/whatsapp.png" alt="" class="fIcon">
+                </div>
+            </div>
+            <div class="footerRightMenu">
+                <span class="copyright">@Twin Glocks.</span>
             </div>
         </div>
-        <div class="footerRightMenu">
-            <span class="copyright">@Twin Glocks.</span>
-        </div>
-    </div>
-</footer>
-        <!-- Add these Firebase scripts -->
+    </footer>
+
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="./app.js"></script>
