@@ -20,35 +20,276 @@ try {
 const auth = firebase.auth();
 
 // ==================== USER DATA STORAGE ====================
-function saveUserData(user) {
-    const userData = {
-        uid: user.uid,
-        name: user.displayName,
-        email: user.email,
-        photo: user.photoURL,
-        isLoggedIn: true,
-        loginTime: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        cart: [],
-        wishlist: [],
-        orders: []
-    };
-    
-    localStorage.setItem('userData', JSON.stringify(userData));
-    console.log("✅ User data saved to localStorage");
+let userData = {
+    uid: null,
+    name: null,
+    email: null,
+    photo: null,
+    isLoggedIn: false,
+    cart: []
+};
+
+// ==================== LOCAL STORAGE FUNCTIONS ====================
+function saveCartToLocalStorage() {
+    if (userData.isLoggedIn && userData.uid) {
+        const key = `cart_${userData.uid}`;
+        localStorage.setItem(key, JSON.stringify(userData.cart));
+        console.log("💾 Cart saved to localStorage");
+    }
 }
 
-function loadUserData() {
-    const saved = localStorage.getItem('userData');
-    if (saved) {
-        return JSON.parse(saved);
+function loadCartFromLocalStorage() {
+    if (userData.isLoggedIn && userData.uid) {
+        const key = `cart_${userData.uid}`;
+        const savedCart = localStorage.getItem(key);
+        if (savedCart) {
+            userData.cart = JSON.parse(savedCart);
+            updateCartCount();
+            updateCartModal();
+            console.log("📥 Cart loaded from localStorage");
+        }
     }
-    return null;
+}
+
+function saveUserData(user) {
+    userData.uid = user.uid;
+    userData.name = user.displayName;
+    userData.email = user.email;
+    userData.photo = user.photoURL;
+    userData.isLoggedIn = true;
+    userData.loginTime = new Date().toISOString();
+    
+    // Load existing data from localStorage
+    loadCartFromLocalStorage();
+    updateCartCount();
+    console.log("✅ User data saved");
 }
 
 function clearUserData() {
-    localStorage.removeItem('userData');
+    userData = {
+        uid: null,
+        name: null,
+        email: null,
+        photo: null,
+        isLoggedIn: false,
+        cart: []
+    };
+    updateCartCount();
     console.log("🗑️ User data cleared");
+}
+
+// ==================== CART FUNCTIONALITY ====================
+function addToCart(product, size, colorCode, colorImage) {
+    if (!userData.isLoggedIn) {
+        alert('Please login with Google first to add items to cart!');
+        document.querySelector('.footerRight').scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
+
+    if (!size) {
+        alert('Please select a size before adding to cart!');
+        return;
+    }
+
+    const existingItem = userData.cart.find(item => 
+        item.productId === product.id && 
+        item.size === size && 
+        item.color === colorCode
+    );
+
+    if (existingItem) {
+        existingItem.quantity++;
+        showNotification('Item quantity updated in cart!');
+    } else {
+        const cartItem = {
+            id: Date.now(),
+            productId: product.id,
+            title: product.title,
+            price: product.price,
+            size: size,
+            color: colorCode,
+            image: colorImage,
+            quantity: 1,
+            addedDate: new Date().toISOString()
+        };
+        userData.cart.push(cartItem);
+        showNotification('Item added to cart!');
+    }
+
+    updateCartCount();
+    updateCartModal();
+    
+    // Save to localStorage
+    saveCartToLocalStorage();
+}
+
+function removeFromCart(itemId) {
+    userData.cart = userData.cart.filter(item => item.id !== itemId);
+    updateCartCount();
+    updateCartModal();
+    showNotification('Item removed from cart');
+    
+    // Save to localStorage
+    saveCartToLocalStorage();
+}
+
+function updateCartQuantity(itemId, change) {
+    const item = userData.cart.find(i => i.id === itemId);
+    if (item) {
+        item.quantity += change;
+        if (item.quantity <= 0) {
+            removeFromCart(itemId);
+        } else {
+            updateCartModal();
+            updateCartCount();
+            // Save to localStorage
+            saveCartToLocalStorage();
+        }
+    }
+}
+
+function updateCartCount() {
+    const cartCountEl = document.querySelector('.cartCount');
+    if (cartCountEl) {
+        const totalItems = userData.cart.reduce((sum, item) => sum + item.quantity, 0);
+        cartCountEl.textContent = totalItems;
+        cartCountEl.style.display = totalItems > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function getCartTotal() {
+    return userData.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+}
+
+function updateCartModal() {
+    const cartItems = document.getElementById('cartItems');
+    const cartTotal = document.getElementById('cartTotal');
+    const cartFooter = document.querySelector('.cartFooter');
+    
+    if (!cartItems) return;
+
+    // Check if user is logged in
+    if (!userData.isLoggedIn) {
+        // Show login required message
+        cartItems.innerHTML = `
+            <div class="cartLoginMessage">
+                <div class="cartLoginIcon">🛒</div>
+                <h2>Login Required</h2>
+                <p>Please login to view your cart items and proceed to checkout.</p>
+                <button class="cartLoginBtn" onclick="redirectToLogin()">
+                    Login Now
+                </button>
+            </div>
+        `;
+        // Hide checkout buttons
+        if (cartFooter) cartFooter.style.display = 'none';
+        return;
+    }
+
+    // User is logged in, show cart items
+    if (cartFooter) cartFooter.style.display = 'block';
+
+    if (userData.cart.length === 0) {
+        cartItems.innerHTML = '<p style="text-align: center; color: #666; padding: 40px 20px;">Your cart is empty<br><small>Start shopping now!</small></p>';
+        if (cartTotal) cartTotal.textContent = '$0';
+        return;
+    }
+
+    cartItems.innerHTML = userData.cart.map(item => `
+        <div class="cartItem">
+            <img src="${item.image}" alt="${item.title}">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; margin-bottom: 5px;">${item.title}</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                    Size: ${item.size} | Color: ${item.color}
+                </div>
+                <div style="font-weight: 600; color: #369e62;">$${item.price}</div>
+            </div>
+            <div class="quantityControls">
+                <button class="quantityBtn" onclick="updateCartQuantity(${item.id}, -1)">-</button>
+                <span style="min-width: 20px; text-align: center;">${item.quantity}</span>
+                <button class="quantityBtn" onclick="updateCartQuantity(${item.id}, 1)">+</button>
+            </div>
+            <button class="removeBtn" onclick="removeFromCart(${item.id})">×</button>
+        </div>
+    `).join('');
+
+    if (cartTotal) {
+        cartTotal.textContent = `$${getCartTotal()}`;
+    }
+}
+
+function redirectToLogin() {
+    // Close cart modal
+    const cartModal = document.querySelector('.cartModal');
+    if (cartModal) cartModal.style.display = 'none';
+    
+    // Scroll to login section in footer
+    document.querySelector('.footerRight').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleCart() {
+    const cartModal = document.querySelector('.cartModal');
+    if (cartModal) {
+        const isVisible = cartModal.style.display === 'block';
+        cartModal.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            updateCartModal();
+        }
+    }
+}
+
+function proceedToCheckout() {
+    if (userData.cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+    }
+    
+    // Close cart modal
+    const cartModal = document.querySelector('.cartModal');
+    if (cartModal) cartModal.style.display = 'none';
+    
+    // Scroll to product section where payment form is
+    const productSection = document.querySelector('.product');
+    if (productSection) {
+        productSection.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Show payment form after scroll
+    setTimeout(() => {
+        const payment = document.querySelector(".payment");
+        if (payment) {
+            payment.style.display = "flex";
+        }
+    }, 500);
+}
+
+// ==================== NOTIFICATION SYSTEM ====================
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #369e62;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        z-index: 10000;
+        font-weight: 500;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 // ==================== SOCIAL LOGIN FUNCTIONALITY ====================
@@ -60,26 +301,32 @@ const loginStatus = document.getElementById('loginStatus');
 let currentUser = null;
 
 // Google Login
-googleBtn.addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    signInWithProvider(provider, 'Google');
-});
+if (googleBtn) {
+    googleBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        signInWithProvider(provider, 'Google');
+    });
+}
 
 // Facebook Login
-facebookBtn.addEventListener('click', () => {
-    alert('Facebook login coming soon! Use Google for now.');
-});
+if (facebookBtn) {
+    facebookBtn.addEventListener('click', () => {
+        alert('Facebook login coming soon! Use Google for now.');
+    });
+}
 
 // GitHub Login
-githubBtn.addEventListener('click', () => {
-    alert('GitHub login coming soon! Use Google for now.');
-});
+if (githubBtn) {
+    githubBtn.addEventListener('click', () => {
+        alert('GitHub login coming soon! Use Google for now.');
+    });
+}
 
 function signInWithProvider(provider, providerName) {
     auth.signInWithPopup(provider)
         .then((result) => {
             currentUser = result.user;
-            saveUserData(currentUser); // Save user data
+            saveUserData(currentUser);
             showLoginSuccess(`Welcome, ${currentUser.displayName}!`);
             updateUserInterface();
         })
@@ -90,27 +337,30 @@ function signInWithProvider(provider, providerName) {
 }
 
 function showLoginSuccess(message) {
-    loginStatus.style.display = 'block';
-    loginStatus.style.background = '#e8f5e8';
-    loginStatus.style.color = '#2e7d32';
-    loginStatus.innerHTML = `✅ ${message}`;
+    if (loginStatus) {
+        loginStatus.style.display = 'block';
+        loginStatus.style.background = '#e8f5e8';
+        loginStatus.style.color = '#2e7d32';
+        loginStatus.innerHTML = `✅ ${message}`;
+    }
 }
 
 function showLoginError(message) {
-    loginStatus.style.display = 'block';
-    loginStatus.style.background = '#ffebee';
-    loginStatus.style.color = '#c62828';
-    loginStatus.innerHTML = `❌ ${message}`;
-    
-    setTimeout(() => {
-        loginStatus.style.display = 'none';
-    }, 5000);
+    if (loginStatus) {
+        loginStatus.style.display = 'block';
+        loginStatus.style.background = '#ffebee';
+        loginStatus.style.color = '#c62828';
+        loginStatus.innerHTML = `❌ ${message}`;
+        
+        setTimeout(() => {
+            loginStatus.style.display = 'none';
+        }, 5000);
+    }
 }
 
 function updateUserInterface() {
     const socialButtons = document.querySelector('.socialLoginButtons');
     
-    // ADD THIS CHECK - Fix the error
     if (!socialButtons) {
         console.log("Social buttons not found - page might still be loading");
         return;
@@ -127,11 +377,9 @@ function updateUserInterface() {
         <button class="logoutBtn">Logout</button>
     `;
     
-    // ADD THIS CHECK - Fix the error
     if (socialButtons.parentNode) {
         socialButtons.parentNode.replaceChild(userInfoDiv, socialButtons);
         
-        // Wait a bit before adding event listener
         setTimeout(() => {
             const logoutBtn = document.querySelector('.logoutBtn');
             if (logoutBtn) {
@@ -142,23 +390,25 @@ function updateUserInterface() {
 }
 
 function logout() {
-    auth.signOut().then(() => {
-        currentUser = null;
-        clearUserData(); // Clear user data
-        location.reload();
-    });
+    if (confirm('Are you sure you want to logout?')) {
+        auth.signOut().then(() => {
+            currentUser = null;
+            clearUserData();
+            location.reload();
+        });
+    }
 }
 
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
-        saveUserData(currentUser); // Save user data
+        saveUserData(currentUser);
         updateUserInterface();
         showLoginSuccess(`Welcome back, ${currentUser.displayName}!`);
     }
 });
 
-// ==================== YOUR EXISTING PRODUCT CODE ====================
+// ==================== PRODUCT CODE ====================
 const wrapper = document.querySelector(".sliderWrapper");
 const menuItems = document.querySelectorAll(".menuItem");
 
@@ -168,79 +418,52 @@ const products = [
     title: "Air Force",
     price: 119,
     colors: [
-      {
-        code: "black",
-        img: "./images/air.png",
-      },
-      {
-        code: "darkblue",
-        img: "./images/air2.png",
-      },
-    ],
+      { code: "black", img: "./images/air.png" },
+      { code: "darkblue", img: "./images/air2.png" }
+    ]
   },
   {
     id: 2,
     title: "Air Jordan",
     price: 149,
     colors: [
-      {
-        code: "lightgray",
-        img: "./images/jordan.png",
-      },
-      {
-        code: "green",
-        img: "./images/jordan2.png",
-      },
-    ],
+      { code: "lightgray", img: "./images/jordan.png" },
+      { code: "green", img: "./images/jordan2.png" }
+    ]
   },
   {
     id: 3,
     title: "Blazer",
     price: 109,
     colors: [
-      {
-        code: "lightgray",
-        img: "./images/blazer.png",
-      },
-      {
-        code: "green",
-        img: "./images/blazer2.png",
-      },
-    ],
+      { code: "lightgray", img: "./images/blazer.png" },
+      { code: "green", img: "./images/blazer2.png" }
+    ]
   },
   {
     id: 4,
     title: "Crater",
     price: 129,
     colors: [
-      {
-        code: "black",
-        img: "./images/crater.png",
-      },
-      {
-        code: "lightgray",
-        img: "./images/crater2.png",
-      },
-    ],
+      { code: "black", img: "./images/crater.png" },
+      { code: "lightgray", img: "./images/crater2.png" }
+    ]
   },
   {
     id: 5,
     title: "Hippie",
     price: 99,
     colors: [
-      {
-        code: "gray",
-        img: "./images/hippie.png",
-      },
-      {
-        code: "black",
-        img: "./images/hippie2.png",
-      },
-    ],
-  },
+      { code: "gray", img: "./images/hippie.png" },
+      { code: "black", img: "./images/hippie2.png" }
+    ]
+  }
 ];
 
 let choosenProduct = products[0];
+let selectedSize = null;
+let selectedColor = 0; // Index of selected color
+let selectedColorCode = 'black';
 
 const currentProductImg = document.querySelector(".productImg");
 const currentProductTitle = document.querySelector(".productTitle");
@@ -252,29 +475,51 @@ menuItems.forEach((item, index) => {
   item.addEventListener("click", () => {
     wrapper.style.transform = `translateX(${-100 * index}vw)`;
     choosenProduct = products[index];
+    selectedSize = null; // Reset size selection
+    selectedColor = 0; // Reset to first color
+    selectedColorCode = choosenProduct.colors[0].code;
+    
     currentProductTitle.textContent = choosenProduct.title;
     currentProductPrice.textContent = "$" + choosenProduct.price;
     currentProductImg.src = choosenProduct.colors[0].img;
-    currentProductColors.forEach((color, index) => {
-      color.style.backgroundColor = choosenProduct.colors[index].code;
+    
+    // Reset size selection UI
+    currentProductSizes.forEach((s) => {
+      s.style.backgroundColor = "white";
+      s.style.color = "black";
+    });
+    
+    // Update color options
+    currentProductColors.forEach((color, idx) => {
+      if (choosenProduct.colors[idx]) {
+        color.style.backgroundColor = choosenProduct.colors[idx].code;
+        color.style.display = "block";
+      } else {
+        color.style.display = "none";
+      }
     });
   });
 });
 
 currentProductColors.forEach((color, index) => {
   color.addEventListener("click", () => {
-    currentProductImg.src = choosenProduct.colors[index].img;
+    if (choosenProduct.colors[index]) {
+      currentProductImg.src = choosenProduct.colors[index].img;
+      selectedColor = index;
+      selectedColorCode = choosenProduct.colors[index].code;
+    }
   });
 });
 
-currentProductSizes.forEach((size, index) => {
+currentProductSizes.forEach((size) => {
   size.addEventListener("click", () => {
-    currentProductSizes.forEach((size) => {
-      size.style.backgroundColor = "white";
-      size.style.color = "black";
+    currentProductSizes.forEach((s) => {
+      s.style.backgroundColor = "white";
+      s.style.color = "black";
     });
     size.style.backgroundColor = "black";
     size.style.color = "white";
+    selectedSize = size.textContent;
   });
 });
 
@@ -282,121 +527,25 @@ const productButton = document.querySelector(".productButton");
 const payment = document.querySelector(".payment");
 const close = document.querySelector(".close");
 
-// Replace your current buy button code with this:
-productButton.addEventListener("click", () => {
-    if (!currentUser) {
-        alert('Please login with Google first to make a purchase!');
-        // Scroll to login section
-        document.querySelector('.footerRight').scrollIntoView({ behavior: 'smooth' });
-        return;
-    }
-    payment.style.display = "flex";
-});
-
-close.addEventListener("click", () => {
-    payment.style.display = "none";
-
-});
-
-// ==================== PRODUCT SEARCH FUNCTIONALITY ====================
-
-const searchInput = document.getElementById('searchInput');
-const searchIcon = document.getElementById('searchIcon');
-const searchResults = document.getElementById('searchResults');
-
-// Only initialize search if elements exist
-if (searchInput && searchIcon && searchResults) {
-    
-    // Search function
-    function searchProducts(searchTerm) {
-        const term = searchTerm.toLowerCase().trim();
-        
-        if (term.length === 0) {
-            searchResults.style.display = 'none';
+// Add to cart with size validation
+if (productButton) {
+    productButton.addEventListener("click", () => {
+        if (!selectedSize) {
+            alert('Please select a size before adding to cart!');
             return;
         }
-
-        const filteredProducts = products.filter(product => 
-            product.title.toLowerCase().includes(term) ||
-            product.title.toLowerCase().replace(/\s+/g, '').includes(term.replace(/\s+/g, ''))
-        );
-
-        displaySearchResults(filteredProducts);
-    }
-
-    // Display search results
-    function displaySearchResults(results) {
-        searchResults.innerHTML = '';
-
-        if (results.length === 0) {
-            searchResults.innerHTML = '<div class="noResults">No products found</div>';
-            searchResults.style.display = 'block';
-            return;
-        }
-
-        results.forEach(product => {
-            const resultItem = document.createElement('div');
-            resultItem.className = 'searchResultItem';
-            resultItem.innerHTML = `
-                <img src="${product.colors[0].img}" alt="${product.title}" class="searchResultImage">
-                <div class="searchResultInfo">
-                    <div class="searchResultName">${product.title}</div>
-                    <div class="searchResultPrice">$${product.price}</div>
-                </div>
-            `;
-            
-            resultItem.addEventListener('click', () => {
-                selectProductFromSearch(product);
-            });
-            
-            searchResults.appendChild(resultItem);
-        });
-
-        searchResults.style.display = 'block';
-    }
-
-    // When user selects a product from search
-    function selectProductFromSearch(product) {
-        const productIndex = products.findIndex(p => p.id === product.id);
-        
-        if (productIndex !== -1) {
-            menuItems[productIndex].click();
-            document.getElementById('product').scrollIntoView({ 
-                behavior: 'smooth' 
-            });
-        }
-        
-        searchInput.value = '';
-        searchResults.style.display = 'none';
-    }
-
-    // Event listeners for search
-    searchInput.addEventListener('input', (e) => {
-        searchProducts(e.target.value);
+        addToCart(choosenProduct, selectedSize, selectedColorCode, choosenProduct.colors[selectedColor].img);
     });
-
-    searchIcon.addEventListener('click', () => {
-        searchProducts(searchInput.value);
-    });
-
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchProducts(searchInput.value);
-        }
-    });
-
-    // Close search results when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search')) {
-            searchResults.style.display = 'none';
-        }
-    });
-
-    // Also close results when scrolling
-    window.addEventListener('scroll', () => {
-        searchResults.style.display = 'none';
-    });
-
-} else {
-    console.log('Search elements not found - search functionality disabled');
 }
+
+if (close) {
+    close.addEventListener("click", () => {
+        payment.style.display = "none";
+    });
+}
+
+// Make functions globally available
+window.updateCartQuantity = updateCartQuantity;
+window.removeFromCart = removeFromCart;
+window.toggleCart = toggleCart;
+window.proceedToCheckout = proceedToCheckout;
