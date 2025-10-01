@@ -31,6 +31,10 @@ nav {
 .searchInput {
   border: none;
   background-color: transparent;
+  width: 100%;
+  color: white;
+  font-size: 13px;
+  outline: none;
 }
 
 .searchInput::placeholder {
@@ -54,7 +58,7 @@ nav {
 }
 
 .cartIcon:hover {
-  background: #2d7d4f;
+  background: black;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(54, 158, 98, 0.3);
 }
@@ -633,7 +637,7 @@ footer {
 .fIcon{
   width: 20px;
   height: 20px;
-  margin-right: 10px;
+  margin-right: 30px;
 }
 
 .copyright{
