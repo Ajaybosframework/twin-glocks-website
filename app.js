@@ -1,4 +1,4 @@
-// ==================== FIREBASE CONFIG ====================
+// ==================== 1. FIREBASE SETUP ====================
 const firebaseConfig = {
   apiKey: "AIzaSyDNHmox9X-XQF9LE-SjQpuR_LyrU1oBTGM",
   authDomain: "twin-glocks.firebaseapp.com",
@@ -9,7 +9,6 @@ const firebaseConfig = {
   measurementId: "G-V28WDH62T8"
 };
 
-// Initialize Firebase
 try {
     firebase.initializeApp(firebaseConfig);
     console.log("Firebase initialized successfully!");
@@ -19,7 +18,14 @@ try {
 
 const auth = firebase.auth();
 
-// ==================== USER DATA STORAGE ====================
+// When user logs in, just print EVERYTHING
+//auth.onAuthStateChanged((user) => {
+    //if (user) {
+       // console.log('COMPLETE USER OBJECT:', user);
+   // }
+//});
+
+// ==================== 2. USER DATA ====================
 let userData = {
     uid: null,
     name: null,
@@ -29,25 +35,19 @@ let userData = {
     cart: []
 };
 
-// ==================== LOCAL STORAGE FUNCTIONS ====================
-function saveCartToLocalStorage() {
-    if (userData.isLoggedIn && userData.uid) {
-        const key = `cart_${userData.uid}`;
-        localStorage.setItem(key, JSON.stringify(userData.cart));
-    }
-}
+let currentUser = null;
 
-function loadCartFromLocalStorage() {
-    if (userData.isLoggedIn && userData.uid) {
-        const key = `cart_${userData.uid}`;
-        const savedCart = localStorage.getItem(key);
-        if (savedCart) {
-            userData.cart = JSON.parse(savedCart);
-            updateCartCount();
-            updateCartModal();
-        }
+// ==================== 3. AUTHENTICATION ====================
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        saveUserData(user);
+        updateUserInterface();
+    } else {
+        currentUser = null;
+        clearUserData();
     }
-}
+});
 
 function saveUserData(user) {
     userData.uid = user.uid;
@@ -73,7 +73,103 @@ function clearUserData() {
     updateCartCount();
 }
 
-// ==================== CART FUNCTIONALITY ====================
+// ==================== 4. LOGIN SYSTEM ====================
+function initializeSocialLogin() {
+    const googleBtn = document.querySelector('.googleBtn');
+    const facebookBtn = document.querySelector('.facebookBtn');
+    const githubBtn = document.querySelector('.githubBtn');
+
+    if (googleBtn) {
+        googleBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    currentUser = user;
+                    saveUserData(user);
+                    showLoginSuccess(`Welcome, ${user.displayName}!`);
+                    updateUserInterface();
+                })
+                .catch((error) => {
+                    console.error('Login error:', error);
+                    if (error.code === 'auth/popup-closed-by-user') {
+                    } else {
+                        showLoginError('Login failed. Please try again.');
+                    }
+                });
+        });
+    }
+
+    if (facebookBtn) {
+        facebookBtn.addEventListener('click', () => {
+            alert('Facebook login coming soon! Use Google for now.');
+        });
+    }
+
+    if (githubBtn) {
+        githubBtn.addEventListener('click', () => {
+            alert('GitHub login coming soon! Use Google for now.');
+        });
+    }
+}
+
+function updateUserInterface() {
+    const socialButtons = document.querySelector('.socialLoginButtons');
+    
+    if (!socialButtons || !currentUser) return;
+    
+    const userInfoDiv = document.createElement('div');
+    userInfoDiv.className = 'userInfo';
+    userInfoDiv.innerHTML = `
+        <img src="${currentUser.photoURL}" alt="User" class="userAvatar" onerror="this.src='https://via.placeholder.com/32'">
+        <div class="userDetails">
+            <div class="userName">${currentUser.displayName}</div>
+            <div class="userEmail">${currentUser.email}</div>
+        </div>
+        <button class="logoutBtn">Logout</button>
+    `;
+    
+    if (socialButtons.parentNode) {
+        socialButtons.parentNode.replaceChild(userInfoDiv, socialButtons);
+        
+        const logoutBtn = userInfoDiv.querySelector('.logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', logout);
+        }
+    }
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        auth.signOut().then(() => {
+            currentUser = null;
+            clearUserData();
+            location.reload();
+        });
+    }
+}
+
+// ==================== 5. LOCAL STORAGE ====================
+function saveCartToLocalStorage() {
+    if (userData.isLoggedIn && userData.uid) {
+        const key = `cart_${userData.uid}`;
+        localStorage.setItem(key, JSON.stringify(userData.cart));
+    }
+}
+
+function loadCartFromLocalStorage() {
+    if (userData.isLoggedIn && userData.uid) {
+        const key = `cart_${userData.uid}`;
+        const savedCart = localStorage.getItem(key);
+        if (savedCart) {
+            userData.cart = JSON.parse(savedCart);
+            updateCartCount();
+            updateCartModal();
+        }
+    }
+}
+
+// ==================== 6. CART CORE FUNCTIONS ====================
 function addToCart(product, size, colorCode, colorImage) {
     if (!userData.isLoggedIn) {
         alert('Please login first to add items to cart!');
@@ -138,6 +234,7 @@ function updateCartQuantity(itemId, change) {
     }
 }
 
+// ==================== 7. CART DISPLAY FUNCTIONS ====================
 function updateCartCount() {
     const cartCountEl = document.querySelector('.cartCount');
     if (cartCountEl) {
@@ -158,9 +255,7 @@ function updateCartModal() {
     
     if (!cartItems) return;
 
-    // Check if user is logged in
     if (!userData.isLoggedIn) {
-        // Show login required message
         cartItems.innerHTML = `
             <div style="text-align: center; padding: 3rem 2rem; color: #666;">
                 <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">🛒</div>
@@ -176,12 +271,11 @@ function updateCartModal() {
         return;
     }
 
-    // User is logged in, show cart items
     if (cartFooter) cartFooter.style.display = 'block';
 
     if (userData.cart.length === 0) {
         cartItems.innerHTML = '<p style="text-align: center; color: #666; padding: 40px 20px;">Your cart is empty<br><small>Start shopping now!</small></p>';
-        if (cartTotal) cartTotal.textContent = '$0';
+        if (cartTotal) cartTotal.textContent = '₹0';
         return;
     }
 
@@ -193,7 +287,7 @@ function updateCartModal() {
                 <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
                     Size: ${item.size} | Color: ${item.color}
                 </div>
-                <div style="font-weight: 600; color: #369e62;">$${item.price}</div>
+                <div style="font-weight: 600; color: #369e62;">₹${item.price}</div>
             </div>
             <div class="quantityControls">
                 <button class="quantityBtn" onclick="updateCartQuantity(${item.id}, -1)">-</button>
@@ -205,7 +299,7 @@ function updateCartModal() {
     `).join('');
 
     if (cartTotal) {
-        cartTotal.textContent = `$${getCartTotal()}`;
+        cartTotal.textContent = `₹${getCartTotal()}`;
     }
 }
 
@@ -254,159 +348,12 @@ function redirectToLogin() {
     document.querySelector('.footerRight').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ==================== NOTIFICATION SYSTEM ====================
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #369e62;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        z-index: 10000;
-        font-weight: 500;
-        opacity: 1;
-        transition: opacity 0.3s ease;
-    `;
-    
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// ==================== SIMPLE POPUP LOGIN ====================
-function initializeSocialLogin() {
-    const googleBtn = document.querySelector('.googleBtn');
-    const facebookBtn = document.querySelector('.facebookBtn');
-    const githubBtn = document.querySelector('.githubBtn');
-
-    if (googleBtn) {
-        googleBtn.addEventListener('click', () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider)
-                .then((result) => {
-                    const user = result.user;
-                    currentUser = user;
-                    saveUserData(user);
-                    showLoginSuccess(`Welcome, ${user.displayName}!`);
-                    updateUserInterface();
-                })
-                .catch((error) => {
-                    console.error('Login error:', error);
-                    if (error.code === 'auth/popup-closed-by-user') {
-                        // User closed the popup - do nothing
-                    } else {
-                        showLoginError('Login failed. Please try again.');
-                    }
-                });
-        });
-    }
-
-    if (facebookBtn) {
-        facebookBtn.addEventListener('click', () => {
-            alert('Facebook login coming soon! Use Google for now.');
-        });
-    }
-
-    if (githubBtn) {
-        githubBtn.addEventListener('click', () => {
-            alert('GitHub login coming soon! Use Google for now.');
-        });
-    }
-}
-
-function showLoginSuccess(message) {
-    const loginStatus = document.getElementById('loginStatus');
-    if (loginStatus) {
-        loginStatus.style.display = 'block';
-        loginStatus.style.background = '#e8f5e8';
-        loginStatus.style.color = '#2e7d32';
-        loginStatus.innerHTML = `✅ ${message}`;
-        setTimeout(() => {
-            loginStatus.style.display = 'none';
-        }, 3000);
-    }
-}
-
-function showLoginError(message) {
-    const loginStatus = document.getElementById('loginStatus');
-    if (loginStatus) {
-        loginStatus.style.display = 'block';
-        loginStatus.style.background = '#ffebee';
-        loginStatus.style.color = '#c62828';
-        loginStatus.innerHTML = `❌ ${message}`;
-        setTimeout(() => {
-            loginStatus.style.display = 'none';
-        }, 3000);
-    }
-}
-
-function updateUserInterface() {
-    const socialButtons = document.querySelector('.socialLoginButtons');
-    
-    if (!socialButtons || !currentUser) return;
-    
-    const userInfoDiv = document.createElement('div');
-    userInfoDiv.className = 'userInfo';
-    userInfoDiv.innerHTML = `
-        <img src="${currentUser.photoURL}" alt="User" class="userAvatar" onerror="this.src='https://via.placeholder.com/32'">
-        <div class="userDetails">
-            <div class="userName">${currentUser.displayName}</div>
-            <div class="userEmail">${currentUser.email}</div>
-        </div>
-        <button class="logoutBtn">Logout</button>
-    `;
-    
-    if (socialButtons.parentNode) {
-        socialButtons.parentNode.replaceChild(userInfoDiv, socialButtons);
-        
-        const logoutBtn = userInfoDiv.querySelector('.logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', logout);
-        }
-    }
-}
-
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        auth.signOut().then(() => {
-            currentUser = null;
-            clearUserData();
-            location.reload();
-        });
-    }
-}
-
-let currentUser = null;
-
-// Handle auth state
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        currentUser = user;
-        saveUserData(user);
-        updateUserInterface();
-    } else {
-        currentUser = null;
-        clearUserData();
-    }
-});
-
-// ==================== PRODUCT CODE ====================
-const wrapper = document.querySelector(".sliderWrapper");
-const menuItems = document.querySelectorAll(".menuItem");
-
+// ==================== 8. PRODUCTS DATA ====================
 const products = [
   {
     id: 1,
     title: "Air Force",
-    price: 119,
+    price: 4999,
     colors: [
       { code: "black", img: "./images/air.png" },
       { code: "darkblue", img: "./images/air2.png" }
@@ -415,7 +362,7 @@ const products = [
   {
     id: 2,
     title: "Air Jordan",
-    price: 149,
+    price: 3999,
     colors: [
       { code: "lightgray", img: "./images/jordan.png" },
       { code: "green", img: "./images/jordan2.png" }
@@ -424,7 +371,7 @@ const products = [
   {
     id: 3,
     title: "Blazer",
-    price: 109,
+    price: 2999,
     colors: [
       { code: "lightgray", img: "./images/blazer.png" },
       { code: "green", img: "./images/blazer2.png" }
@@ -433,7 +380,7 @@ const products = [
   {
     id: 4,
     title: "Crater",
-    price: 129,
+    price: 3500,
     colors: [
       { code: "black", img: "./images/crater.png" },
       { code: "lightgray", img: "./images/crater2.png" }
@@ -442,7 +389,7 @@ const products = [
   {
     id: 5,
     title: "Hippie",
-    price: 99,
+    price: 1999,
     colors: [
       { code: "gray", img: "./images/hippie.png" },
       { code: "black", img: "./images/hippie2.png" }
@@ -455,6 +402,9 @@ let selectedSize = null;
 let selectedColor = 0;
 let selectedColorCode = 'black';
 
+// ==================== 9. PRODUCT DISPLAY ====================
+const wrapper = document.querySelector(".sliderWrapper");
+const menuItems = document.querySelectorAll(".menuItem");
 const currentProductImg = document.querySelector(".productImg");
 const currentProductTitle = document.querySelector(".productTitle");
 const currentProductPrice = document.querySelector(".productPrice");
@@ -470,7 +420,7 @@ menuItems.forEach((item, index) => {
     selectedColorCode = choosenProduct.colors[0].code;
     
     currentProductTitle.textContent = choosenProduct.title;
-    currentProductPrice.textContent = "$" + choosenProduct.price;
+    currentProductPrice.textContent = "₹" + choosenProduct.price;
     currentProductImg.src = choosenProduct.colors[0].img;
     
     currentProductSizes.forEach((s) => {
@@ -511,6 +461,7 @@ currentProductSizes.forEach((size) => {
   });
 });
 
+// ==================== 10. ADD TO CART BUTTON ====================
 const productButton = document.querySelector(".productButton");
 const payment = document.querySelector(".payment");
 const close = document.querySelector(".close");
@@ -531,16 +482,67 @@ if (close) {
     });
 }
 
-// Make functions globally available
+// ==================== 11. NOTIFICATIONS ====================
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #369e62;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        z-index: 10000;
+        font-weight: 500;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function showLoginSuccess(message) {
+    const loginStatus = document.getElementById('loginStatus');
+    if (loginStatus) {
+        loginStatus.style.display = 'block';
+        loginStatus.style.background = '#e8f5e8';
+        loginStatus.style.color = '#2e7d32';
+        loginStatus.innerHTML = `✅ ${message}`;
+        setTimeout(() => {
+            loginStatus.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function showLoginError(message) {
+    const loginStatus = document.getElementById('loginStatus');
+    if (loginStatus) {
+        loginStatus.style.display = 'block';
+        loginStatus.style.background = '#ffebee';
+        loginStatus.style.color = '#c62828';
+        loginStatus.innerHTML = `❌ ${message}`;
+        setTimeout(() => {
+            loginStatus.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// ==================== 12. GLOBAL FUNCTIONS & INIT ====================
 window.updateCartQuantity = updateCartQuantity;
 window.removeFromCart = removeFromCart;
 window.toggleCart = toggleCart;
 window.proceedToCheckout = proceedToCheckout;
 window.redirectToLogin = redirectToLogin;
 
-// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeSocialLogin();
     updateCartCount();
 });
-
