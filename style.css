@@ -735,7 +735,7 @@ footer {
 }
 
 .logoutBtn:hover {
-    background: #c82333;
+    background: #dc3545;
 }
 
 /* Size Selection Active State */
@@ -911,3 +911,4 @@ footer {
 .cartLoginBtn:hover {
     background: #005a87;
 }
+
