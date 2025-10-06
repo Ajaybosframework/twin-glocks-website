@@ -41,6 +41,16 @@ nav {
   color: lightgray;
 }
 
+.categoriesTitle {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color:lightgray;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding-top: 10px;
+}
+
 /* Cart Icon Styles */
 .cartIcon {
   position: relative;
@@ -911,5 +921,6 @@ footer {
 .cartLoginBtn:hover {
     background: #005a87;
 }
+
 
 
