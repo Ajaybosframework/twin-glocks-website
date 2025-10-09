@@ -5,8 +5,8 @@ const firebaseConfig = {
   projectId: "twin-glocks",
   storageBucket: "twin-glocks.firebasestorage.app",
   messagingSenderId: "233223778947",
-  appId: "1:233223778947:web:28a193f4e1b579fb5ee1b6",
-  measurementId: "G-V28WDH62T8"
+  appId: "1:233223778947:web:ca6bfd37ce0a805b5ee1b6",
+  measurementId: "G-LH74LZFVK6"
 };
 
 try {
@@ -546,3 +546,4 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSocialLogin();
     updateCartCount();
 });
+
