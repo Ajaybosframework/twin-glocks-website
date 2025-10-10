@@ -1,13 +1,25 @@
 // ==================== 1. FIREBASE SETUP ====================
-const firebaseConfig = {
-  apiKey: "AIzaSyDNHmox9X-XQF9LE-SjQpuR_LyrU1oBTGM",
-  authDomain: "twin-glocks.firebaseapp.com",
-  projectId: "twin-glocks",
-  storageBucket: "twin-glocks.firebasestorage.app",
-  messagingSenderId: "233223778947",
-  appId: "1:233223778947:web:ca6bfd37ce0a805b5ee1b6",
-  measurementId: "G-LH74LZFVK6"
-};
+let firebaseApp;
+
+async function initializeFirebase() {
+    try {
+        console.log('Loading Firebase configuration securely...');
+        
+        // Fetch config from Netlify Function (secure)
+        const response = await fetch('/.netlify/functions/firebase-config');
+        const firebaseConfig = await response.json();
+
+        // Initialize Firebase
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+        console.log('Firebase initialized securely!');
+        
+        // Your existing Firebase code continues here...
+        // Move all your auth, firestore, storage code here
+        
+    } catch (error) {
+        console.error('Error initializing Firebase:', error);
+    }
+}
 
 try {
     firebase.initializeApp(firebaseConfig);
@@ -546,5 +558,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSocialLogin();
     updateCartCount();
 });
+
 
 
